@@ -39,10 +39,11 @@ export class FormTransaccionComponent implements OnInit {
   @Input() codigoChild: number;
   @Input() claveCuentaChild: string;
   @Input() codClienteChild: number;
+  @Input() codProductoChild: number;
   @Input() descripcionChild: string;
   @Input() nombreProcesoChild: string;
   @Input() procesoListarPorChild: string;
-
+  
   /*MODALES*/
   @ViewChild("modal_success", { static: false }) modal_success: TemplateRef<any>;
   @ViewChild("modal_error", { static: false }) modal_error: TemplateRef<any>;
@@ -128,9 +129,9 @@ export class FormTransaccionComponent implements OnInit {
       this.listarCuentaClavePorTransaccionActivo(this.codTransaccion);
       // Datos para envio de notificaciones
       this.prefijoTelefonico = this.transaccionEditar?.prefijoTelefonico,
-        this.celular = this.transaccionEditar?.celular,
-        this.nombreCliente = this.transaccionEditar?.nombreCliente,
-        this.transaccionEditarAux = this.transaccionEditar;
+      this.celular = this.transaccionEditar?.celular,
+      this.nombreCliente = this.transaccionEditar?.nombreCliente,
+      this.transaccionEditarAux = this.transaccionEditar;
       this.codProducto = this.transaccionEditar?.codProducto;
       this.numMes = this.transaccionEditar?.numMes;
       this.numDiasExtra = this.transaccionEditar?.numDiasExtra;
@@ -254,19 +255,26 @@ export class FormTransaccionComponent implements OnInit {
 
   listarTransaccion() {
     this.listaTransaccionChild = [];
-    if (this.procesoListarPorChild != undefined) {
-      if (this.procesoListarPorChild === "ACaducarse") {
-        this.listarTransaccionACaducarse();
-        return;
-      }
+    if (this.procesoListarPorChild === "ACaducarse") {
+      this.listarTransaccionACaducarse();
+      return;
     }
     // Receptar datos de Input
     if (this.claveCuentaChild?.length != 0) {
       this.listarTransaccionPorClaveCuenta();
       return;
     }
+    if (this.codClienteChild != 0 && Number(this.codClienteChild) + "" != "NaN" &&
+        this.codProductoChild != 0 && Number(this.codProductoChild) + "" != "NaN") {
+      this.listarTransaccionPorClienteYProducto();
+      return;
+    }
     if (this.codClienteChild != 0 && Number(this.codClienteChild) + "" != "NaN") {
       this.listarTransaccionPorCliente();
+      return;
+    }
+    if (this.codProductoChild != 0 && Number(this.codProductoChild) + "" != "NaN") {
+      this.listarTransaccionPorProducto();
       return;
     }
     if (this.descripcionChild?.length != 0) {
@@ -297,6 +305,28 @@ export class FormTransaccionComponent implements OnInit {
 
   listarTransaccionPorCliente() {
     this.transaccionService.listarTransaccionPorCliente(this.codClienteChild).subscribe(
+      (respuesta) => {
+        this.listaTransaccionChild = respuesta['listado'];
+        if (this.listaTransaccionChild?.length > 0) {
+          this.mostrarListaTransaccion();
+        }
+      }
+    )
+  }
+
+  listarTransaccionPorProducto() {
+    this.transaccionService.listarTransaccionPorProducto(this.codProducto).subscribe(
+      (respuesta) => {
+        this.listaTransaccionChild = respuesta['listado'];
+        if (this.listaTransaccionChild?.length > 0) {
+          this.mostrarListaTransaccion();
+        }
+      }
+    )
+  }
+
+  listarTransaccionPorClienteYProducto() {
+    this.transaccionService.listarTransaccionPorClienteYProducto(this.codClienteChild, this.codProductoChild).subscribe(
       (respuesta) => {
         this.listaTransaccionChild = respuesta['listado'];
         if (this.listaTransaccionChild?.length > 0) {
@@ -402,7 +432,7 @@ export class FormTransaccionComponent implements OnInit {
       }
       // No modifica la fecha de registro cuando es EDITAR
       let fechaRegistra = "";
-      if (this.nombreProceso != undefined && this.nombreProceso.includes("EDITAR")) {
+      if (this.nombreProceso.includes("EDITAR")) {
         fechaRegistra = dayjs(this.transaccionEditar?.fechaRegistra).format("YYYY-MM-DD HH:mm:ss.SSS");
       } else {
         fechaRegistra = dayjs(new Date).format("YYYY-MM-DD HH:mm:ss.SSS");
