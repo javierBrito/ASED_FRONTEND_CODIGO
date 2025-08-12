@@ -63,7 +63,7 @@ export class TransaccionPrincipalComponent implements OnInit {
   public celular: string;
   public claveCuenta: string;
   public codCliente: number;
-  public codProducto : number;
+  public codProducto: number;
   public nombreProceso: string;
   public procesoListarPor: string;
   public displayNoneAcciones: string;
@@ -148,15 +148,15 @@ export class TransaccionPrincipalComponent implements OnInit {
     this.enviarNotificacionIndividual = false;
   }
 
-  verListaCuentaClave = async (codParticipante: number) => {
+  verListaCuentaClave = async (codTransaccion: number) => {
     //this.listaCuentaClave = [];
-    await this.listarCuentaClavePorTransaccion(codParticipante);
+    await this.listarCuentaClavePorTransaccion(codTransaccion);
     await this.verModalCuentaClave();
   }
 
-  listarCuentaClavePorTransaccion(codParticipante: number) {
+  listarCuentaClavePorTransaccion(codTransaccion: number) {
     return new Promise((resolve, rejects) => {
-      this.transaccionService.listarCuentaClavePorTransaccion(codParticipante).subscribe({
+      this.transaccionService.listarCuentaClavePorTransaccion(codTransaccion).subscribe({
         next: (respuesta) => {
           this.listaCuentaClave = respuesta['listado'];
           resolve(respuesta);
@@ -236,13 +236,14 @@ export class TransaccionPrincipalComponent implements OnInit {
 
   obtenerTransaccionACaducarse = async () => {
     this.enviarNotificacion = false;
+    this.enviarNotificacionIndividual = false;
     await this.confirmarEnviarNotificacion(null);
   }
 
   listarTransaccionACaducarse() {
     this.procesoListarPor = "ACaducarse";
     return new Promise((resolve, rejects) => {
-      this.transaccionService.listarTransaccionACaducarse(5).subscribe({
+      this.transaccionService.listarTransaccionACaducarse(3).subscribe({
         next: (respuesta) => {
           this.listaTransaccion = respuesta['listado'];
           if (this.listaTransaccion?.length > 0) {
@@ -276,7 +277,7 @@ export class TransaccionPrincipalComponent implements OnInit {
       return;
     }
     if (this.codCliente != 0 && Number(this.codCliente) + "" != "NaN" &&
-        this.codProducto != 0 && Number(this.codProducto) + "" != "NaN") {
+      this.codProducto != 0 && Number(this.codProducto) + "" != "NaN") {
       this.procesoListarPor = "ClienteProducto";
       this.listarTransaccionPorClienteYProducto();
       return;
@@ -384,6 +385,16 @@ export class TransaccionPrincipalComponent implements OnInit {
     this.page = 1;
     let montoTotal = 0;
     for (const ele of this.listaTransaccion) {
+      // Se adiciona para verificar si tiene lista de cuenta clave - jbrito-20240802
+      /*
+      ele.displayNoneListaCuentaClave = "none";
+      await this.listarCuentaClavePorTransaccion(ele?.codigo);
+      if (this.listaCuentaClave?.length != 0) {
+        ele.displayNoneListaCuentaClave = "";
+      }
+      */
+      // Fin
+
       ele.colorFila = "green";
       ele.visibleBoton = "none";
       ele.colorColumna = "white";
@@ -407,7 +418,7 @@ export class TransaccionPrincipalComponent implements OnInit {
 
       // ele.fechaFin <= this.fechaHoy
       ele.numDiasRenovar = numDias;
-      if (!(numDias > 0 && numDias > 5)) {
+      if (!(numDias > 0 && numDias > 3)) {
         ele.colorFila = "red";
         ele.visibleBoton = ""
       }
@@ -444,11 +455,11 @@ export class TransaccionPrincipalComponent implements OnInit {
       if (this.seEnvioWhatsapp) {
         this.mensajeService.mensajeCorrecto('Las notificaciones se enviaron con éxito...');
       } else {
-        this.mensajeService.mensajeError('Error... ' + this.respuestaEnvioWhatsapp + ' ingrese nuevo token');
+        //this.mensajeService.mensajeError('Error... ' + this.respuestaEnvioWhatsapp + ' ingrese nuevo token');
       }
     }
   }
-  
+
   obtenerTotalesPorFecha() {
     this.listaTransaccion = [];
     this.displayNoneAcciones = '';
@@ -466,7 +477,8 @@ export class TransaccionPrincipalComponent implements OnInit {
     this.listaTransaccion = event;
   }
 
-  openDetail(codjornada) {
+  openDetail() {
+    this.nombreProceso = "CREAR";
     this.showDetail = true;
   }
 
@@ -528,6 +540,10 @@ export class TransaccionPrincipalComponent implements OnInit {
     await this.confirmarEnviarNotificacion(transaccion);
   }
 
+  enviarCredenciales = async (transaccion: Transaccion) => {
+    await this.confirmarEnviarNotificacionCredenciales(transaccion);
+  }
+
   closeDetail($event) {
     this.showDetail = $event;
     this.transaccionSeleccionado = null;
@@ -551,7 +567,7 @@ export class TransaccionPrincipalComponent implements OnInit {
     Swal
       .fire({
         title: "Continuar envío Whatsapp...",
-        text: "¿Quiere enviar las notificaciones?'",
+        text: "¿Quiere enviar la notificación?'",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: "Sí, enviar",
@@ -563,16 +579,42 @@ export class TransaccionPrincipalComponent implements OnInit {
             this.seEnvioWhatsapp = false;
             this.enviarWhatsappApi(transaccion);
             if (this.seEnvioWhatsapp) {
-              this.mensajeService.mensajeCorrecto('Las notificación se enviaron con éxito...');
+              this.mensajeService.mensajeCorrecto('La notificación se envió con éxito...');
             } else {
-              this.mensajeService.mensajeError('Error... ' + this.respuestaEnvioWhatsapp + ' ingrese nuevo token');
+              //this.mensajeService.mensajeError('Error... ' + this.respuestaEnvioWhatsapp + ' ingrese nuevo token');
             }
           } else {
+            console.log("Hola")
             this.enviarNotificacion = true;
             this.listarTransaccionACaducarse();
           }
         } else if (resultado.isDismissed) {
-          console.log("No envia notificaciones");
+          console.log("No envió la notificación...");
+        }
+      });
+  }
+
+  async confirmarEnviarNotificacionCredenciales(transaccion: Transaccion) {
+    Swal
+      .fire({
+        title: "Continuar envío Whatsapp...",
+        text: "¿Quiere enviar las credenciales?'",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: "Sí, enviar",
+        cancelButtonText: "No, cancelar",
+      })
+      .then(async resultado => {
+        if (resultado.isConfirmed) {
+          this.enviarWhatsappApiCredenciales(transaccion);
+          if (this.seEnvioWhatsapp) {
+            this.mensajeService.mensajeCorrecto('Las credenciales se enviaron con éxito...');
+          } else {
+            //console.log("No envió la notificación...");
+            //this.mensajeService.mensajeError('Error... ' + this.respuestaEnvioWhatsapp + ' ingrese nuevo token');
+          }
+        } else if (resultado.isDismissed) {
+          console.log("No envió la notificación...");
         }
       });
   }
@@ -649,6 +691,24 @@ export class TransaccionPrincipalComponent implements OnInit {
   };
 
   async enviarWhatsappApi(transaccion: Transaccion) {
+    let montoTransaccion: number = transaccion?.monto; //123.456;
+    let parteEntera: number;
+    let parteDecimal: number;
+    parteEntera = Math.trunc(montoTransaccion);
+    //console.log("Entero = ", parteEntera)
+    parteDecimal = parseFloat((montoTransaccion % 1).toFixed(2)); // Limitar decimales
+    //console.log("Decimal = ", parteDecimal)
+    if (parteDecimal < 0.099) {
+      montoTransaccion = Math.trunc(transaccion?.monto);
+    } else {
+      montoTransaccion = parseFloat(transaccion?.monto?.toFixed(2));
+    }
+    console.log("montoTransaccion = ", montoTransaccion)
+
+    let numDiasRenovar = transaccion?.numDiasRenovar;
+    if (numDiasRenovar < 0) {
+      numDiasRenovar = numDiasRenovar * (-1);
+    }
     let imageSrcString = this.toDataURL('./assets/images/trofeo/trofeo1.png/')
 
     //let fechaFin = dayjs(transaccion.fechaFin).format("DD-MM-YYYY");
@@ -657,12 +717,21 @@ export class TransaccionPrincipalComponent implements OnInit {
     let año = moment(transaccion?.fechaFin).format("YYYY");
     //transaccion.numDiasRenovar = transaccion?.numDiasRenovar == 0 ? 1 :transaccion?.numDiasRenovar; 
     //this.mensajeCaduca = "*Mensaje Automático* Estimado(a) " + transaccion.nombreCliente + " el servicio de " + transaccion.descripcion + " que tiene contratado con nosotros está por caducar el " + fechaFin + ", favor su ayuda confirmando si desea renovarlo, caso contrario el día de corte procederemos con la suspención del mismo... Un excelente dia, tarde o noche....";
-    this.mensajeCaduca = "*Notificación Automática*%0aEstimado(a) " + transaccion.nombreCliente
-      + " el servicio de " + transaccion.descripcion
-      + " que tiene contratado con nosotros está por caducar en "
-      + transaccion?.numDiasRenovar + " día(s) el " + dia + " de " + mes + " de " + año
-      + ", favor su ayuda confirmando la renovación con el pago correspondiente para poder registrarlo, caso contrario el día de corte procederemos con la suspención del servicio... Un excelente dia, tarde o noche....";
-
+    this.mensajeCaduca = "*Notificación Automática*%0a*Tu servicio Caducó o Caducará pronto*%0aEstimado(a) " + transaccion.nombreCliente
+    + " el servicio de " + transaccion.descripcion + " que tiene contratado con nosotros ";
+    if (transaccion?.numDiasRenovar > 0) {
+      this.mensajeCaduca = this.mensajeCaduca + " está por caducar en ";
+    } else {
+      this.mensajeCaduca = this.mensajeCaduca + " caducó hace ";
+    }
+    this.mensajeCaduca = this.mensajeCaduca
+    + "*" + numDiasRenovar + " día(s) el " + dia + " de " + mes + " de " + año + "*"
+    + ", favor su ayuda confirmando la renovación con el pago correspondiente para poder registrarlo, caso contrario el día de corte procederemos con la suspención del servicio... Un excelente dia, tarde o noche...."
+    //Adicionar jbrito-20250805
+    + "%0a " 
+    + "%0aCosto de renovación: *$" + montoTransaccion + "*"
+    + "%0aTiempo: *" + transaccion?.numMes + " Mes(es)*";
+    
     // Codificar el mensaje para asegurar que los caracteres especiales se manejen correctamente
     const codec = new HttpUrlEncodingCodec();
     //const encodedValue = codec.encodeValue(mensajeNotificacion); // Encodes the value as 'Hello%20World%21'
@@ -673,6 +742,8 @@ export class TransaccionPrincipalComponent implements OnInit {
       transaccion.prefijoTelefonico = "593";
     }
     this.celularEnvioWhatsapp = transaccion?.prefijoTelefonico + transaccion?.celular.substring(1, 15).trim();
+    //this.celularEnvioWhatsapp = transaccion?.prefijoTelefonico + "992752367";
+    //this.celularEnvioWhatsapp = transaccion?.prefijoTelefonico + "995038551";
     // Enviar mensaje
     this.transaccionService.enviarMensajeWhatsappAI(this.celularEnvioWhatsapp, decodedValue).subscribe({
       next: async (response) => {
@@ -688,6 +759,74 @@ export class TransaccionPrincipalComponent implements OnInit {
     this.transaccionService.enviarImagenWhatsappAI(this.celularEnvioWhatsapp, decodedValue, imageSrcString).subscribe({
       next: async (response) => {
         this.seEnvioWhatsapp = true;
+        this.mensajeService.mensajeCorrecto('Las notificaciones se enviaron con éxito...');
+      },
+      error: (error) => {
+        this.mensajeService.mensajeError('Ha habido un problema al enviar las notificaciones ' + error);
+      }
+    });
+    */
+  }
+
+  async enviarWhatsappApiCredenciales(transaccion: Transaccion) {
+    let imageSrcString = this.toDataURL('./assets/images/trofeo/trofeo1.png/')
+    //console.log("imageSrcString = ", imageSrcString)
+
+    this.listaCuentaClave = [];
+    await this.listarCuentaClavePorTransaccion(transaccion?.codigo);
+
+    // Obtener las n cuentas con su clave de la lista si los hay
+    let cuentaClaveNotifica = "";
+    if (this.listaCuentaClave?.length > 0) {
+      for (let cuentaClave of this.listaCuentaClave) {
+        cuentaClaveNotifica = cuentaClaveNotifica + "%0a" + ((cuentaClave?.cuenta == null) || (cuentaClave?.cuenta == "") ? " " : "*(" + cuentaClave?.cuenta + ")*") + "  " + ((cuentaClave?.clave == null) || (cuentaClave?.clave == "") ? " " : "*" + cuentaClave?.clave + "*");
+      }
+    }
+
+    let dia = moment(transaccion?.fechaFin).format("D");
+    let mes = moment(transaccion?.fechaFin).format("MMMM");
+    let año = moment(transaccion?.fechaFin).format("YYYY");
+
+    let mensajeClaveCuenta = "";
+    let mensajeClaveCuentaNormal = "";
+    mensajeClaveCuentaNormal = "%0a" + ((transaccion?.claveCuenta == null) || (transaccion?.claveCuenta == "") ? " " : "*(" + transaccion?.claveCuenta + ")*") + "  " + ((transaccion?.clave == null) || (transaccion?.clave == "") ? " " : "*" + transaccion?.clave + "*");
+    //console.log("mensajeClaveCuentaNormal = ", mensajeClaveCuentaNormal)
+    if (mensajeClaveCuentaNormal == "%0a    ") {
+      mensajeClaveCuenta = mensajeClaveCuenta + cuentaClaveNotifica;
+    } else {
+      mensajeClaveCuenta = mensajeClaveCuenta + mensajeClaveCuentaNormal + cuentaClaveNotifica;
+    }
+
+    // Segun nombreProceso el encabezado de la notificación - jbrito-20240726
+    let mensajeCabecera = "";
+    mensajeCabecera = "*Credenciales del Servicio* " + transaccion?.descripcion + "%0aEstimado(a) ";
+
+    let mensajeNotificacion = mensajeCabecera + transaccion?.nombreCliente
+      + " hemos actualizado las credenciales o bajo su solicitud las enviamos nuevamente: "
+      + mensajeClaveCuenta;
+    // Codificar el mensaje para asegurar que los caracteres especiales se manejen correctamente
+    const codec = new HttpUrlEncodingCodec();
+    //const encodedValue = codec.encodeValue(mensajeNotificacion); // Encodes the value as 'Hello%20World%21'
+    const decodedValue = codec.decodeValue(mensajeNotificacion); // Decodes the value as 'Hello World!'
+    // Validar prefijo telefonico
+    if (transaccion?.prefijoTelefonico == "" || transaccion?.prefijoTelefonico == null) {
+      transaccion.prefijoTelefonico = "593";
+    }
+    let celularEnvioWhatsapp = transaccion?.prefijoTelefonico + transaccion?.celular.substring(1, 15).trim();
+    //let celularEnvioWhatsapp = transaccion?.prefijoTelefonico + "992752367";
+    // Enviar mensaje
+    this.transaccionService.enviarMensajeWhatsappAI(celularEnvioWhatsapp, decodedValue).subscribe({
+      next: async (response) => {
+        this.mensajeService.mensajeCorrecto('Las credenciales se enviaron con éxito...');
+      },
+      error: (error) => {
+        this.mensajeService.mensajeError('Ha habido un problema al enviar la notificación ' + error);
+      }
+    });
+    // Enviar Imagen
+    /*
+    this.transaccionService.enviarImagenWhatsappAI(celularEnvioWhatsapp, decodedValue, imageSrcString).subscribe({
+      next: async (response) => {
         this.mensajeService.mensajeCorrecto('Las notificaciones se enviaron con éxito...');
       },
       error: (error) => {
@@ -721,7 +860,7 @@ export class TransaccionPrincipalComponent implements OnInit {
   }
   get codProductoField() {
     return this.formTransaccion.get('codProducto');
-  }  get itemsRegistrosNFField() {
+  } get itemsRegistrosNFField() {
     return this.formTransaccion.get('itemsRegistrosNF');
   }
 }

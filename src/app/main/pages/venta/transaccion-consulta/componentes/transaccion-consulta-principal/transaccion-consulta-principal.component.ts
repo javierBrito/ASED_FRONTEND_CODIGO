@@ -239,7 +239,7 @@ export class TransaccionConsultaPrincipalComponent implements OnInit {
 
   listarTransaccionACaducarse() {
     return new Promise((resolve, rejects) => {
-      this.transaccionConsultaService.listarTransaccionACaducarse(5).subscribe({
+      this.transaccionConsultaService.listarTransaccionACaducarse(3).subscribe({
         next: (respuesta) => {
           this.listaTransaccion = respuesta['listado'];
           if (this.listaTransaccion?.length > 0) {
@@ -365,7 +365,7 @@ export class TransaccionConsultaPrincipalComponent implements OnInit {
 
         // ele.fechaFin <= this.fechaHoy
         ele.numDiasRenovar = numDias;
-        if (!(numDias > 0 && numDias > 5)) {
+        if (!(numDias > 0 && numDias > 3)) {
           ele.colorFila = "red";
           ele.visibleBoton = ""
         }
